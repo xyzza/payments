@@ -1,22 +1,40 @@
+import psycopg2
 from decimal import Decimal
+from payments.converter import CurrencyEnum
 
 
-class CurrencyEnum:
+async def create_account(
+        pool,
+        first_name: str,
+        last_name: str,
+        city: str,
+        currency: CurrencyEnum) -> int:
 
-    USD = 'USD'
-    EUR = 'UER'
+    query = """
+    INSERT INTO account
+        (first_name, last_name, country, currency)
+    VALUES ($1, $2, $3, $4) RETURNING id;
+    """
+
+    params = (first_name, last_name, city, currency)
+
+    try:
+        async with pool.acquire(timeout=10) as conn:
+            result = await conn.fetchval(query, *params)
+    except psycopg2.IntegrityError:
+        raise Exception('account already exists')
+
+    return result
 
 
-def create_account(first_name: str, last_name: str, city: str, currency: CurrencyEnum) -> int:
-    raise NotImplementedError()
-    return 'account_id' # номер кошелька клиента
+async def account_balance(pool, account_id: int) -> Decimal:
 
+    query = """
+    SELECT balance FROM account WHERE id = $1
+    """
+    params = (int(account_id), )
+    # TODO: timeout to settings
+    async with pool.acquire(timeout=10) as conn:
+        result = await conn.fetchval(query, *params)
 
-def account_balance(account_id: int) -> Decimal:
-    raise NotImplementedError()
-    return Decimal('0.00')
-
-
-def convert_currency(amount: Decimal, from_currency: CurrencyEnum, to_currency: CurrencyEnum) -> Decimal:
-    raise NotImplementedError()
-    return Decimal('0.00')
+    return result

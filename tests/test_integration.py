@@ -1,57 +1,82 @@
-import pytest
 from decimal import Decimal
-from payments.account import create_account
-from payments.account import account_balance
-from payments.account import CurrencyEnum
-from payments.processing import process_credit_operation, \
-    process_transfer_operation
-from payments.transfer import crediting_funds, transfer_funds
-from payments.transfer import send_to_processing
 from payments.transfer import OperationStatusEnum
 
 
-@pytest.fixture()
-def sender_account_id():
-    return 1
+async def test_create_account(client):
+
+    params = {
+        'first_name': 'Timur',
+        'last_name': 'Akhmadiev',
+        'city': 'Moscow',
+        'currency': 'USD'
+    }
+
+    resp = await client.post('/account', data=params)
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp.get('account_id') == 1
+
+    params.update({'first_name': 'Rumit', 'currency': 'USD'})
+    await client.post('/account', data=params)
 
 
-@pytest.fixture()
-def recipient_account_id():
-    return 1
+async def test_credit_funds(client):
+
+    params = {'account_id': 1, 'amount': '100.00'}
+
+    resp = await client.post('/account/credit', data=params)
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp.get('operation_id') == 1
 
 
-def test_create_account():
+async def test_transfer_funds(client):
 
-    account_id = create_account('Tim', 'Akhmadiev', 'Kazan', CurrencyEnum.USD)
+    params = {'sender_id': 1, 'recipient_id': 2, 'amount': '50.00'}
 
-    assert account_id == 1
-
-
-def test_crediting_funds(sender_account_id):
-
-    old_balance = account_balance(sender_account_id)
-    amount = Decimal('42.42')
-
-    operation_id = crediting_funds(sender_account_id, amount, CurrencyEnum.EUR)
-
-    operations_processed = send_to_processing()
-    assert operations_processed == 1
-
-    status = process_credit_operation(operation_id)
-    assert status == OperationStatusEnum.ACCEPTED
-
-    new_balance = account_balance(sender_account_id)
-    assert old_balance + amount == new_balance
+    resp = await client.post('/account/transfer', data=params)
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp.get('operation_id') == 2
 
 
-def test_transfer_funds(sender_account_id, recipient_account_id):
+async def test_send_to_processing(client):
 
-    amount = Decimal('42.42')
+    resp = await client.post('processing/send', data={'operation_id': 1})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp['history_id']
 
-    operation_id = transfer_funds(sender_account_id, recipient_account_id, amount)
+    resp = await client.post('processing/send', data={'operation_id': 2})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp['history_id']
 
-    operations_processed = send_to_processing()
-    assert operations_processed == 1
 
-    status = process_transfer_operation(operation_id)
-    assert status == OperationStatusEnum.ACCEPTED
+async def test_process_credit(client):
+
+    resp = await client.post('processing/callback/credit', data={'operation_id': 1})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp['status'] == OperationStatusEnum.ACCEPTED
+
+
+async def test_process_transfer(client):
+
+    resp = await client.post('processing/callback/transfer', data={'operation_id': 2})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert resp['status'] == OperationStatusEnum.ACCEPTED
+
+
+async def test_check_balance(client):
+
+    resp = await client.get('/account/balance', params={'account_id': 1})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert Decimal(resp['account_balance']) == Decimal('50.00')
+
+    resp = await client.get('/account/balance', params={'account_id': 2})
+    assert resp.status == 200
+    resp = await resp.json()
+    assert Decimal(resp['account_balance']) == Decimal('50.00')
