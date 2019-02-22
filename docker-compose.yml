@@ -1,0 +1,31 @@
+version: "3"
+services:
+
+  webapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: payments:latest
+    command: ["./run.sh"]
+    depends_on:
+    - db
+    ports:
+    - "8080:8080"
+    links:
+    - db
+    environment:
+    - DB_DSN=postgresql://postgres:postgres@db:5432/payments
+    network_mode: bridge
+
+  db:
+    build:
+      context: payments/db
+      dockerfile: Dockerfile
+    image: postgres_payments:latest
+
+#    environment:
+#      - DB_USER=srg
+#      - DB_PASS=srg_pass
+#      - DB_NAME=srg
+
+    network_mode: bridge
