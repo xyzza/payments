@@ -1,6 +1,7 @@
 from decimal import Decimal
-from payments.converter import convert_currency
+
 from payments.converter import CurrencyEnum
+from payments.converter import convert_currency
 
 
 def test_convert_usd_usd():

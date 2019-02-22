@@ -1,12 +1,13 @@
-import pytest
 import psycopg2
-from yoyo import read_migrations
-from yoyo import get_backend
+import pytest
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from yoyo import get_backend
+from yoyo import read_migrations
+
 from payments import settings
-from payments.server import init_session
 from payments.server import init_app
 from payments.server import init_db
+from payments.server import init_session
 
 
 @pytest.fixture(scope='session')
