@@ -11,7 +11,7 @@ async def process_credit_operation(pool, operation_id: int) -> OperationStatusEn
         async with conn.transaction():
             # TODO: check that accepted / failed status doesn't exists
             query = """
-            SELECT sender_id, recipient_id, volume FROM operation o
+            SELECT sender_id, recipient_id, amount FROM operation o
             INNER JOIN operation_history oh
                 ON o.id = oh.operation_id
                 AND oh.status=$1
@@ -53,7 +53,7 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
         async with conn.transaction():
             # TODO: check that accepted / failed status doesn't exists
             query = """
-            SELECT sender_id, recipient_id, volume, currency FROM operation o
+            SELECT sender_id, recipient_id, amount FROM operation o
             INNER JOIN operation_history oh
                 ON o.id = oh.operation_id
                 AND oh.status=$1
@@ -62,7 +62,7 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
 
             params = (OperationStatusEnum.PROCESSING, int(operation_id))
             # TODO: check sender_id == recipient_id
-            sender_id, recipient_id, amount, currency = await conn.fetchrow(
+            sender_id, recipient_id, amount = await conn.fetchrow(
                 query,
                 *params
             )
@@ -78,9 +78,9 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
             sender_balance, sender_currency = sender_data
             recipient_balance, recipient_currency = recipient_data
 
-            debit = convert_currency(amount, currency, sender_currency)
+            # debit = convert_currency(amount, currency, sender_currency)
 
-            if debit > sender_balance:
+            if amount > sender_balance:
                 # not enough funds for withdrawal
                 resulting_status = OperationStatusEnum.FAILED
 
@@ -94,11 +94,11 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
                     WHERE id = $1;
                 """
 
-                params = (int(sender_id), debit)
+                params = (int(sender_id), amount)
 
                 await conn.execute(query, *params)
 
-                credit = convert_currency(amount, currency, recipient_currency)
+                credit = convert_currency(amount, sender_currency, recipient_currency)
 
                 query = """
                 WITH current_balance AS (SELECT balance FROM account WHERE id = $1)

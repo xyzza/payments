@@ -80,3 +80,17 @@ async def test_check_balance(client):
     assert resp.status == 200
     resp = await resp.json()
     assert Decimal(resp['account_balance']) == Decimal('50.00')
+
+
+async def test_report(client):
+
+    resp = await client.get('/report', params={
+        'first_name': 'Timur',
+        'last_name': 'Akhmadiev',
+        'begin': '',
+        'end': ''
+    })
+
+    assert resp.status == 200
+    resp = await resp.json()
+    assert len(resp.get('rows', [])) == 6

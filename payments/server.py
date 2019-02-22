@@ -8,6 +8,8 @@ from payments.account import create_account
 from payments.account import account_balance
 from payments.processing import process_credit_operation, \
     process_transfer_operation
+from payments.report import billing_report
+from payments.report.schema import report_schema
 from payments.transfer import credit_funds, send_to_processing
 from payments.transfer import transfer_funds
 
@@ -102,6 +104,23 @@ async def process_transfer(request):
     return web.json_response({'status': operation_status})
 
 
+async def report(request):
+
+    data = request.rel_url.query
+
+    rows = await billing_report(
+        request.app['db'],
+        data['first_name'],
+        data['last_name'],
+        data['begin'],
+        data['end']
+    )
+
+    rows = [report_schema.dump(r) for r in rows]
+
+    return web.json_response({'rows': rows})
+
+
 def init_app(db, session):
 
     async def _pool_on_startup(app):
@@ -121,6 +140,7 @@ def init_app(db, session):
     app.router.add_post('/processing/send', process)
     app.router.add_post('/processing/callback/credit', process_credit)
     app.router.add_post('/processing/callback/transfer', process_transfer)
+    app.router.add_get('/report', report)
 
     app['session'] = session
 
@@ -139,8 +159,6 @@ def init_db(dsn, pool_size):
 
 
 def run_app():
-    loop = asyncio.get_event_loop()
-    # db = loop.run_until_complete(init_db(settings.DB_DSN, settings.DB_POOL_SIZE))
     session = init_session()
-    app = init_app(init_app(settings.DB_DSN, settings.DB_POOL_SIZE), session)
+    app = init_app(init_db(settings.DB_DSN, settings.DB_POOL_SIZE), session)
     web.run_app(app)

@@ -36,9 +36,7 @@ steps = [
                 -- operation recipient FK
                 recipient_id INTEGER REFERENCES account(id) NOT NULL,
                 -- operation volume
-                volume DECIMAL (16,2) NOT NULL,
-                -- operation currency
-                currency CURRENCY DEFAULT 'USD' NOT NULL,
+                amount DECIMAL (16,2) NOT NULL,
                 -- operation timestamp
                 timestamp TIMESTAMP DEFAULT current_timestamp NOT NULL
             );

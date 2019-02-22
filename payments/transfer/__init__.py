@@ -1,7 +1,5 @@
 from decimal import Decimal
 
-from payments.converter import convert_currency
-
 
 class OperationStatusEnum:
 
@@ -18,7 +16,7 @@ async def credit_funds(pool, account_id: int, amount: Decimal) -> int:
 
             query = """
             INSERT INTO operation
-                (sender_id, recipient_id, volume)
+                (sender_id, recipient_id, amount)
             VALUES ($1, $2, $3) RETURNING id;
             """
             params = (int(account_id), int(account_id), Decimal(amount))
@@ -46,7 +44,7 @@ async def transfer_funds(
 
             query = """
             INSERT INTO operation
-                (sender_id, recipient_id, volume)
+                (sender_id, recipient_id, amount)
             VALUES ($1, $2, $3) RETURNING id;
             """
 
