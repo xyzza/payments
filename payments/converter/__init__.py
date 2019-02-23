@@ -38,5 +38,4 @@ def convert_currency(amount: Decimal,
         usd = convert_currency(amount, from_currency, CurrencyEnum.USD)
         converted = convert_currency(usd, CurrencyEnum.USD, to_currency)
 
-    # TODO: check for rounding errors
     return converted

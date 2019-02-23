@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from payments.transfer import OperationStatusEnum
+from payments.operation import OperationStatusEnum
 
 
 async def test_create_account(client):
@@ -12,46 +12,102 @@ async def test_create_account(client):
         'currency': 'USD'
     }
 
-    resp = await client.post('/account', data=params)
+    resp = await client.post('/account/create', data=params)
     assert resp.status == 200
     resp = await resp.json()
     assert resp.get('account_id') == 1
 
     params.update({'first_name': 'Rumit', 'currency': 'USD'})
-    await client.post('/account', data=params)
+    await client.post('/account/create', data=params)
+
+
+async def test_create_existing_account(client):
+
+    params = {
+        'first_name': 'Timur',
+        'last_name': 'Akhmadiev',
+        'city': 'Moscow',
+        'currency': 'USD'
+    }
+
+    resp = await client.post('/account/create', data=params)
+    assert resp.status == 422
+    resp = await resp.json()
+    assert resp.get('error') == 'Account already exists'
 
 
 async def test_credit_funds(client):
 
     params = {'account_id': 1, 'amount': '100.00'}
 
-    resp = await client.post('/account/credit', data=params)
-    assert resp.status == 200
+    resp = await client.post('/transfers/credit', data=params)
+    assert resp.status == 202
     resp = await resp.json()
     assert resp.get('operation_id') == 1
 
 
 async def test_transfer_funds(client):
 
-    params = {'sender_id': 1, 'recipient_id': 2, 'amount': '50.00'}
+    params = {'sender_id': 1, 'recipient_id': 2, 'amount': '60.00'}
 
-    resp = await client.post('/account/transfer', data=params)
-    assert resp.status == 200
+    resp = await client.post('/transfers/transfer', data=params)
+    assert resp.status == 202
     resp = await resp.json()
     assert resp.get('operation_id') == 2
+
+
+async def test_transfer_funds_account_doesnt_exists(client):
+
+    params = {'sender_id': 1, 'recipient_id': 2000, 'amount': '50.00'}
+
+    resp = await client.post('/transfers/transfer', data=params)
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Account not found'
+
+    params = {'sender_id': 1000, 'recipient_id': 2000, 'amount': '50.00'}
+
+    resp = await client.post('/transfers/transfer', data=params)
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Account not found'
 
 
 async def test_send_to_processing(client):
 
     resp = await client.post('processing/send', data={'operation_id': 1})
-    assert resp.status == 200
+    assert resp.status == 202
     resp = await resp.json()
     assert resp['history_id']
 
     resp = await client.post('processing/send', data={'operation_id': 2})
-    assert resp.status == 200
+    assert resp.status == 202
     resp = await resp.json()
     assert resp['history_id']
+
+
+async def test_send_to_processing_non_existing(client):
+
+    resp = await client.post('processing/send', data={'operation_id': 1000})
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation not found'
+
+
+async def test_process_wrong_credit(client):
+    """Try to credit "transfer" operation"""
+    resp = await client.post('processing/callback/credit', data={'operation_id': 2})
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation not found'
+
+
+async def test_process_wrong_transfer(client):
+    """Try to transfer "credit" operation"""
+    resp = await client.post('processing/callback/transfer', data={'operation_id': 1})
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation not found'
 
 
 async def test_process_credit(client):
@@ -70,17 +126,38 @@ async def test_process_transfer(client):
     assert resp['status'] == OperationStatusEnum.ACCEPTED
 
 
+async def test_process_operation_twice(client):
+
+    resp = await client.post('processing/callback/transfer', data={'operation_id': 2})
+    assert resp.status == 422
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation inconsistent'
+
+    resp = await client.post('processing/callback/credit', data={'operation_id': 1})
+    assert resp.status == 422
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation inconsistent'
+
+
 async def test_check_balance(client):
 
     resp = await client.get('/account/balance', params={'account_id': 1})
     assert resp.status == 200
     resp = await resp.json()
-    assert Decimal(resp['account_balance']) == Decimal('50.00')
+    assert Decimal(resp['account_balance']) == Decimal('40.00')
 
     resp = await client.get('/account/balance', params={'account_id': 2})
     assert resp.status == 200
     resp = await resp.json()
-    assert Decimal(resp['account_balance']) == Decimal('50.00')
+    assert Decimal(resp['account_balance']) == Decimal('60.00')
+
+
+async def test_check_balance_account_doesnt_exists(client):
+
+    resp = await client.get('/account/balance', params={'account_id': 1000})
+    assert resp.status == 404
+    resp = await resp.json()
+    assert resp.get('error') == 'Account not found'
 
 
 async def test_report(client):

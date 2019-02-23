@@ -8,4 +8,5 @@ DB_DSN = env.str(
     default='postgresql://postgres:postgres@localhost:5432/payments'
 )
 
-DB_POOL_SIZE = 10
+DB_POOL_SIZE = env.int('DB_POOL_SIZE', default=10)
+DB_TIMEOUT = env.int('DB_TIMEOUT', default=10)

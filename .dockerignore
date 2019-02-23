@@ -4,7 +4,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+# Ignore generated files
+**/*.pyc
 # C extensions
 *.so
 

@@ -3,3 +3,4 @@
 pytest
 pytest-cov
 isort
+pytest-aiohttp==0.3.0

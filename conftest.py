@@ -7,7 +7,6 @@ from yoyo import read_migrations
 from payments import settings
 from payments.server import init_app
 from payments.server import init_db
-from payments.server import init_session
 
 
 @pytest.fixture(scope='session')
@@ -40,13 +39,8 @@ def db(db_test_setup_teardown):
 
 
 @pytest.fixture()
-async def session():
-    return init_session()
-
-
-@pytest.fixture()
-def app(db, session):
-    return init_app(db, session)
+def app(db):
+    return init_app(db)
 
 
 @pytest.fixture()

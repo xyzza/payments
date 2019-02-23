@@ -38,7 +38,11 @@ steps = [
                 -- operation volume
                 amount DECIMAL (16,2) NOT NULL,
                 -- operation timestamp
-                timestamp TIMESTAMP DEFAULT current_timestamp NOT NULL
+                timestamp TIMESTAMP DEFAULT current_timestamp NOT NULL,
+                -- operation type 1 is for credit 2 is for transfer
+                type SMALLINT NOT NULL CHECK (
+                    (type=1 and sender_id = recipient_id) or (type=2 and sender_id != recipient_id)
+                )
             );
             
             CREATE TABLE operation_history (
@@ -50,8 +54,12 @@ steps = [
                 status STATUS DEFAULT 'DRAFT' NOT NULL,
                 -- timestamp
                 timestamp TIMESTAMP DEFAULT current_timestamp NOT NULL,
-                -- unique status in one operation
-                CONSTRAINT unq_operation_id_status UNIQUE(operation_id,status)
+                -- counts number of statuses
+                status_count SMALLINT DEFAULT 1 NOT NULL CHECK (status_count > 0 and status_count < 4),
+                -- unique operation_id and status 
+                CONSTRAINT unq_operation_id_status UNIQUE(operation_id, status),
+                -- unique operation_id and status_count
+                CONSTRAINT unq_operation_id_status_count UNIQUE(operation_id, status_count)
             );
         """,
         """
@@ -63,8 +71,3 @@ steps = [
             DROP TYPE CURRENCY;
         """)
 ]
-
-# тип операции не нужен, потому что мы не можем сделать операцию по списанию с чужого аккаунта себе на счет,
-# мы можем только зачислить со своего аккаунта на чужой счет
-# -- operation type could be -1, that's mean credit, or 1, that's mean debit
-#                 type SMALLINT NOT NULL CHECK (type = -1 or type = 1)
