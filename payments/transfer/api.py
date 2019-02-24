@@ -3,12 +3,13 @@ from decimal import Decimal
 import asyncpg
 
 from payments import settings
-from payments.account import AccountDoesNotExists
+from payments.account import AccountDoesNotExistsError
 from payments.account import account_balance
 from payments.account import account_balances_pair
 from payments.operation import OperationTypeEnum
 from payments.operation import create_operation
 from payments.operation import init_operation_draft
+from .exceptions import InsufficientFundsError
 
 
 async def credit_funds(pool, account_id: int, amount: Decimal) -> int:
@@ -35,7 +36,7 @@ async def credit_funds(pool, account_id: int, amount: Decimal) -> int:
                 )
 
         except asyncpg.exceptions.ForeignKeyViolationError:
-                raise AccountDoesNotExists()
+                raise AccountDoesNotExistsError()
 
 
 async def transfer_funds(
@@ -56,6 +57,9 @@ async def transfer_funds(
                     recipient_account_id
                 )
 
+                if sender_balance < amount:
+                    raise InsufficientFundsError()
+
                 return await _create_operation(
                     conn,
                     sender_account_id,
@@ -67,7 +71,7 @@ async def transfer_funds(
                 )
 
         except asyncpg.exceptions.ForeignKeyViolationError:
-            raise AccountDoesNotExists()
+            raise AccountDoesNotExistsError()
 
 
 async def _create_operation(

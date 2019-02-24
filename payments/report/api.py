@@ -1,44 +1,55 @@
 from payments import settings
+from payments.account import AccountDoesNotExistsError
+from .query import find_report_account
+from .query import find_participants
+from .query import fetch_report
+from .query import between_condition
+from .query import begin_condition
+from .query import end_condition
 
 
 async def billing_report(pool, first_name, last_name, begin=None, end=None):
 
     async with pool.acquire(timeout=settings.DB_TIMEOUT) as conn:
 
-        params = [first_name, last_name]
-        extra = ';'
+        account_id = await conn.fetchval(find_report_account, first_name, last_name)
+
+        if account_id is None:
+            raise AccountDoesNotExistsError()
+
+        participants = await conn.fetch(find_participants, account_id)
+
+        if not participants:
+            return []
+
+        participants = [
+            (f'${p[0]+1}', p[1][0]) for p in enumerate(participants)
+        ]
+        indexes, participants = zip(*participants)
+        participants = list(participants)
+
+        params = ','.join(indexes)
 
         if begin and end:
-            extra = f'AND oh.timestamp between({begin}, {end}){extra}'
-            params.extend([begin, end])
+            participants.extend([begin, end])
+            _where = between_condition.format(
+                begin=f'${ len(participants)-1}',
+                end=f'${len(participants)}'
+            )
         elif begin:
-            extra = f'AND oh.timestamp >= {begin}{extra}'
-            params.append(begin)
+            participants.append(begin)
+            _where = begin_condition.format(begin=f'${len(participants)}')
         elif end:
-            extra = f'AND oh.timestamp <= {begin}{extra}'
-            params.append(end)
+            participants.append(end)
+            _where = end_condition.format(end=f'${len(participants)}')
+        else:
+            _where = ''
 
-        query = f"""
-        WITH report_user as (SELECT id FROM account WHERE first_name=$1 AND last_name=$2)
-        SELECT 
-            (o.sender_id = o.recipient_id) as op_type, 
-            COALESCE(to_char(oh.timestamp, 'DD-MM-YYYY HH24:MI:SS'), '') as timestamp, 
-            a.first_name, 
-            a.last_name, 
-            a.balance, 
-            o.id, 
-            o.amount, 
-            oh.status  
-        FROM operation_history oh
-        INNER JOIN operation o 
-            ON oh.operation_id = o.id
-        INNER JOIN account a 
-            ON o.recipient_id = a.id
-        WHERE o.sender_id = (SELECT id FROM report_user) 
-            OR o.recipient_id = (SELECT id FROM report_user)
-        {extra}
-        """
+        query = fetch_report.format(
+            where_condition=_where,
+            params=params
+        )
 
-        rows = await conn.fetch(query, *params)
+        report_rows = await conn.fetch(query, *participants)
 
-        return rows
+        return report_rows

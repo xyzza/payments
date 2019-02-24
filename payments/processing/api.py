@@ -2,8 +2,8 @@ import asyncpg
 
 from payments import settings
 from payments.converter import convert_currency
-from payments.operation import OperationDoesNotExists
-from payments.operation import OperationInconsistent
+from payments.operation import OperationDoesNotExistsError
+from payments.operation import OperationInconsistentError
 from payments.operation import OperationStatusEnum
 from payments.operation import OperationTypeEnum
 from payments.operation import operation_to_processing
@@ -32,7 +32,7 @@ async def process_credit_operation(pool, operation_id: int) -> OperationStatusEn
                         OperationTypeEnum.CREDIT
                     )
                 except TypeError:
-                    raise OperationDoesNotExists()
+                    raise OperationDoesNotExistsError()
 
                 new_balance = await conn.fetchval(increase_balance, recipient_id, amount)
 
@@ -48,7 +48,7 @@ async def process_credit_operation(pool, operation_id: int) -> OperationStatusEn
                 return status
 
         except asyncpg.exceptions.UniqueViolationError:
-            raise OperationInconsistent()
+            raise OperationInconsistentError()
 
 
 async def process_transfer_operation(pool, operation_id: int) -> OperationStatusEnum:
@@ -67,7 +67,7 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
                         OperationTypeEnum.TRANSFER
                     )
                 except TypeError:
-                    raise OperationDoesNotExists()
+                    raise OperationDoesNotExistsError()
 
                 sender_data, recipient_data = await conn.fetch(
                     select_and_lock_accounts,
@@ -115,7 +115,7 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
                 return status
 
         except asyncpg.exceptions.UniqueViolationError:
-            raise OperationInconsistent()
+            raise OperationInconsistentError()
 
 
 async def send_to_processing(pool, operation_id: int) -> int:
@@ -134,7 +134,7 @@ async def send_to_processing(pool, operation_id: int) -> int:
             )
 
             if balances_in_a_row is None:
-                raise OperationDoesNotExists()
+                raise OperationDoesNotExistsError()
 
             result = await conn.fetchval(
                 operation_to_processing,
@@ -145,6 +145,6 @@ async def send_to_processing(pool, operation_id: int) -> int:
                 balances_in_a_row[1]
             )
         except asyncpg.exceptions.ForeignKeyViolationError:
-            raise OperationDoesNotExists()
+            raise OperationDoesNotExistsError()
 
     return result

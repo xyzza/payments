@@ -3,17 +3,17 @@ Operation exceptions
 """
 
 
-class BaseOperationException(Exception):
+class BaseOperationError(Exception):
     pass
 
 
-class OperationDoesNotExists(BaseOperationException):
+class OperationDoesNotExistsError(BaseOperationError):
 
     def __init__(self):
         self.msg = "Operation not found"
 
 
-class OperationInconsistent(BaseOperationException):
+class OperationInconsistentError(BaseOperationError):
 
     def __init__(self):
         self.msg = 'Operation inconsistent'

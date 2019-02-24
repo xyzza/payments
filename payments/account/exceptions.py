@@ -3,17 +3,17 @@ Account exceptions
 """
 
 
-class BaseAccountException(Exception):
+class BaseAccountError(Exception):
     pass
 
 
-class AccountAlreadyExists(BaseAccountException):
+class AccountAlreadyExistsError(BaseAccountError):
 
     def __init__(self):
         self.msg = 'Account already exists'
 
 
-class AccountDoesNotExists(Exception):
+class AccountDoesNotExistsError(Exception):
 
     def __init__(self):
         self.msg = 'Account not found'

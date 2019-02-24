@@ -5,8 +5,8 @@ import asyncpg
 from payments import settings
 from payments.converter import CurrencyEnum
 
-from .exceptions import AccountAlreadyExists
-from .exceptions import AccountDoesNotExists
+from .exceptions import AccountAlreadyExistsError
+from .exceptions import AccountDoesNotExistsError
 from .query import account_balance as _account_balance
 from .query import account_balances_pair as _account_balances_pair
 from .query import create_account as _create_account
@@ -29,7 +29,7 @@ async def create_account(
                 currency
             )
     except asyncpg.exceptions.UniqueViolationError:
-        raise AccountAlreadyExists()
+        raise AccountAlreadyExistsError()
 
     return account_id
 
@@ -40,7 +40,7 @@ async def account_balance(pool, account_id: int) -> Decimal:
         result = await conn.fetchval(_account_balance, account_id)
 
     if result is None:
-        raise AccountDoesNotExists()
+        raise AccountDoesNotExistsError()
 
     return result
 
@@ -55,6 +55,6 @@ async def account_balances_pair(pool, sender_id, recipient_id):
                 recipient_id
             )
         except ValueError:
-            raise AccountDoesNotExists()
+            raise AccountDoesNotExistsError()
 
     return sender_balance[0], recipient_balance[0]
