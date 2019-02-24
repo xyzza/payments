@@ -146,5 +146,7 @@ async def send_to_processing(pool, operation_id: int) -> int:
             )
         except asyncpg.exceptions.ForeignKeyViolationError:
             raise OperationDoesNotExistsError()
+        except asyncpg.exceptions.UniqueViolationError:
+            raise OperationInconsistentError()
 
     return result

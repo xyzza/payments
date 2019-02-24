@@ -19,6 +19,8 @@ async def process_view(request):
         )
     except OperationDoesNotExistsError as ex:
         return web.json_response({'error': ex.msg}, status=404)
+    except OperationInconsistentError as ex:
+        return web.json_response({'error': ex.msg}, status=422)
 
     return web.json_response({'history_id': history_id}, status=202)
 

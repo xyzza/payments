@@ -100,6 +100,14 @@ async def test_send_to_processing(client):
     assert resp['history_id']
 
 
+async def test_send_to_processing_twice(client):
+
+    resp = await client.post('processing/send', data={'operation_id': 2})
+    assert resp.status == 422
+    resp = await resp.json()
+    assert resp.get('error') == 'Operation inconsistent'
+
+
 async def test_send_to_processing_non_existing(client):
 
     resp = await client.post('processing/send', data={'operation_id': 1000})
