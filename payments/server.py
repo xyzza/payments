@@ -44,6 +44,6 @@ def init_db(dsn, pool_size):
     return create_pool(dsn, pool_size)
 
 
-def run_app():
+def run_app(port):
     app = init_app(init_db(settings.DB_DSN, settings.DB_POOL_SIZE))
-    web.run_app(app)
+    web.run_app(app, port=port)

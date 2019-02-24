@@ -27,6 +27,18 @@
 
 **pytest** - инструмент для тестирования кода
 
+
+## Запуск сервиса локально:
+- тесты запускаются в контейнере перед стартом сервиса
+- сервис доступен на localhost:8080
+```bash
+docker-compose build && docker-compose up
+```
+
+```bash
+docker-compose down
+```
+
 ---
 
 ![alt text](Diagram.png)
