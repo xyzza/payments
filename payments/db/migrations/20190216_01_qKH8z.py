@@ -23,7 +23,8 @@ steps = [
                 -- user wallet currency
                 currency CURRENCY DEFAULT 'USD' NOT NULL,
                 -- user wallet balance
-                balance DECIMAL (16,2) DEFAULT 0.00,
+                balance DECIMAL (16,2) DEFAULT 0.00 NOT NULL,
+
                 -- unique user name
                 CONSTRAINT unq_name UNIQUE(first_name,last_name)
             );
@@ -56,6 +57,11 @@ steps = [
                 timestamp TIMESTAMP DEFAULT current_timestamp NOT NULL,
                 -- counts number of statuses
                 status_count SMALLINT DEFAULT 1 NOT NULL CHECK (status_count > 0 and status_count < 4),
+                -- sender_balance
+                sender_balance DECIMAL (16,2) NOT NULL,
+                -- recipient_balance
+                recipient_balance DECIMAL (16,2) NOT NULL,
+                
                 -- unique operation_id and status 
                 CONSTRAINT unq_operation_id_status UNIQUE(operation_id, status),
                 -- unique operation_id and status_count

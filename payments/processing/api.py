@@ -9,6 +9,7 @@ from payments.operation import OperationTypeEnum
 from payments.operation import operation_to_processing
 from payments.operation import select_operation_info
 from payments.operation import update_operation_status
+from payments.operation import select_balances_pair_from_history
 
 from .query import decrease_balance
 from .query import increase_balance
@@ -33,13 +34,15 @@ async def process_credit_operation(pool, operation_id: int) -> OperationStatusEn
                 except TypeError:
                     raise OperationDoesNotExists()
 
-                await conn.execute(increase_balance, recipient_id, amount)
+                new_balance = await conn.fetchval(increase_balance, recipient_id, amount)
 
                 status = await conn.fetchval(
                     update_operation_status,
                     operation_id,
                     OperationStatusEnum.ACCEPTED,
-                    OperationStatusEnum.COUNT[OperationStatusEnum.ACCEPTED]
+                    OperationStatusEnum.COUNT[OperationStatusEnum.ACCEPTED],
+                    new_balance,
+                    new_balance
                 )
 
                 return status
@@ -75,12 +78,24 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
                 sender_balance, sender_currency = sender_data
                 recipient_balance, recipient_currency = recipient_data
 
+                sender_new_balance = sender_balance
+                recipient_new_balance = recipient_balance
+
                 if sender_balance >= amount:
                     # transfer
-                    await conn.execute(decrease_balance, sender_id, amount)
+                    sender_new_balance = await conn.fetchval(
+                        decrease_balance,
+                        sender_id,
+                        amount
+                    )
 
                     credit = convert_currency(amount, sender_currency, recipient_currency)
-                    await conn.execute(increase_balance, recipient_id, credit)
+
+                    recipient_new_balance = await conn.fetchval(
+                        increase_balance,
+                        recipient_id,
+                        credit
+                    )
 
                     resulting_status = OperationStatusEnum.ACCEPTED
 
@@ -92,7 +107,9 @@ async def process_transfer_operation(pool, operation_id: int) -> OperationStatus
                     update_operation_status,
                     operation_id,
                     resulting_status,
-                    OperationStatusEnum.COUNT[resulting_status]
+                    OperationStatusEnum.COUNT[resulting_status],
+                    sender_new_balance,
+                    recipient_new_balance
                 )
 
                 return status
@@ -110,11 +127,22 @@ async def send_to_processing(pool, operation_id: int) -> int:
     async with pool.acquire(timeout=settings.DB_TIMEOUT) as conn:
 
         try:
+            balances_in_a_row = await conn.fetchrow(
+                select_balances_pair_from_history,
+                operation_id,
+                OperationStatusEnum.DRAFT
+            )
+
+            if balances_in_a_row is None:
+                raise OperationDoesNotExists()
+
             result = await conn.fetchval(
                 operation_to_processing,
                 operation_id,
                 OperationStatusEnum.PROCESSING,
-                OperationStatusEnum.COUNT[OperationStatusEnum.PROCESSING]
+                OperationStatusEnum.COUNT[OperationStatusEnum.PROCESSING],
+                balances_in_a_row[0],
+                balances_in_a_row[1]
             )
         except asyncpg.exceptions.ForeignKeyViolationError:
             raise OperationDoesNotExists()

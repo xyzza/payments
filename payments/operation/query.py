@@ -6,14 +6,14 @@ VALUES ($1, $2, $3, $4) RETURNING id;
 
 init_operation_draft = """
 INSERT INTO operation_history
-    (operation_id)
-VALUES ($1);
+    (operation_id, sender_balance, recipient_balance)
+VALUES ($1, $2, $3);
 """
 
 operation_to_processing = """
 INSERT INTO operation_history
-    (operation_id, status, status_count)
-VALUES ($1, $2, $3) RETURNING id;
+    (operation_id, status, status_count, sender_balance, recipient_balance)
+VALUES ($1, $2, $3, $4, $5) RETURNING id;
 """
 
 select_operation_info = """
@@ -27,6 +27,12 @@ INNER JOIN operation_history oh
 
 update_operation_status = """
 INSERT INTO operation_history
-    (operation_id, status, status_count)
-VALUES ($1, $2, $3) RETURNING status;
+    (operation_id, status, status_count, sender_balance, recipient_balance)
+VALUES ($1, $2, $3, $4, $5) RETURNING status;
+"""
+
+select_balances_pair_from_history = """
+SELECT sender_balance, recipient_balance FROM operation_history
+    WHERE operation_id = $1
+    AND status = $2;
 """

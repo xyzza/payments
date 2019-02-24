@@ -6,12 +6,12 @@ decrease_balance = """
 WITH current_balance AS (SELECT balance FROM account WHERE id = $1)
 UPDATE account 
     SET balance = (SELECT current_balance.balance - $2 FROM current_balance) 
-    WHERE id = $1;
+    WHERE id = $1 RETURNING balance;
 """
 
 increase_balance = """
 WITH current_balance AS (SELECT balance FROM account WHERE id = $1)
 UPDATE account 
     SET balance = (SELECT current_balance.balance + $2 FROM current_balance) 
-    WHERE id = $1;
+    WHERE id = $1 RETURNING balance;
 """
