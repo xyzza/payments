@@ -1,6 +1,6 @@
 import sys
-from payments.server import run_app
 
+from payments.server import run_app
 
 if __name__ == '__main__':
     try:

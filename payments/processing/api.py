@@ -7,9 +7,9 @@ from payments.operation import OperationInconsistentError
 from payments.operation import OperationStatusEnum
 from payments.operation import OperationTypeEnum
 from payments.operation import operation_to_processing
+from payments.operation import select_balances_pair_from_history
 from payments.operation import select_operation_info
 from payments.operation import update_operation_status
-from payments.operation import select_balances_pair_from_history
 
 from .query import decrease_balance
 from .query import increase_balance

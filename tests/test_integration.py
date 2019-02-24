@@ -1,6 +1,6 @@
-from decimal import Decimal
 from datetime import datetime
 from datetime import timedelta
+from decimal import Decimal
 
 from payments.operation import OperationStatusEnum
 
